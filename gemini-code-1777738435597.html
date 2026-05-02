@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康冒險：雙人合作版</title>
+    <style>
+        :root {
+            --pico-blue: #4ea5ff;
+            --pico-pink: #ff7bac;
+            --pico-yellow: #f1c40f;
+            --pico-dark: #2c3e50;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--pico-dark);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+        }
+
+        #game-info {
+            padding: 20px;
+            text-align: center;
+        }
+
+        #stage-container {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            background-color: #34495e;
+            border: 4px solid white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        /* 門與鑰匙 */
+        #door {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 60px;
+            height: 80px;
+            background-color: #8e44ad;
+            border: 4px solid white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+        }
+
+        #key {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            font-size: 30px;
+            display: none; /* 初始隱藏 */
+            transition: all 0.2s;
+        }
+
+        /* 角色 */
+        .character {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 3px solid white;
+            border-radius: 5px;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: top 0.1s, left 0.1s;
+        }
+
+        #playerA { background-color: var(--pico-blue); left: 50px; top: 300px; }
+        #playerB { background-color: var(--pico-pink); left: 100px; top: 300px; }
+
+        /* 問題區域 */
+        #quiz-panel {
+            margin-top: 20px;
+            width: 800px;
+            background: white;
+            color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .option-btn {
+            padding: 10px;
+            background: #eee;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .option-btn:hover { background: #ddd; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div id="game-info">
+    <h1>健康知識冒險 (PICO Style)</h1>
+    <p>玩家 A (藍色)：回答問題 ｜ 玩家 B (粉色)：WASD 移動去拿鑰匙開門</p>
+    <h2 id="level-title">關卡 1: 水分補給</h2>
+</div>
+
+<div id="stage-container">
+    <div id="door">🚪</div>
+    <div id="key">🔑</div>
+    <div id="playerA" class="character">😎</div>
+    <div id="playerB" class="character">🤓</div>
+</div>
+
+<div id="quiz-panel">
+    <div>
+        <h3 id="question-text">題目載入中...</h3>
+    </div>
+    <div id="options-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <!-- 按鈕會生成在這裡 -->
+    </div>
+</div>
+
+<script>
+    const levels = [
+        { q: "成人每日建議飲水量是體重(kg)乘以多少？", options: ["10ml", "20ml", "35ml", "100ml"], correct: 2 },
+        { q: "下列哪種運動最能增進心肺功能？", options: ["睡覺", "慢跑", "下棋", "看電視"], correct: 1 },
+        { q: "正確的洗手步驟「內外夾弓大立」後是什麼？", options: ["完", "跳", "腕", "跑"], correct: 2 }
+    ];
+
+    let currentLevel = 0;
+    let hasKey = false;
+    let quizSolved = false;
+
+    // 玩家 B 位置
+    let posB = { x: 100, y: 300 };
+
+    function initLevel() {
+        quizSolved = false;
+        hasKey = false;
+        document.getElementById('key').style.display = 'none';
+        document.getElementById('key').style.left = '50%';
+        document.getElementById('key').style.top = '50%';
+        document.getElementById('level-title').innerText = `關卡 ${currentLevel + 1}: ${levels[currentLevel].q.slice(0,10)}...`;
+        
+        const qData = levels[currentLevel];
+        document.getElementById('question-text').innerText = qData.q;
+        
+        const optionsGrid = document.getElementById('options-grid');
+        optionsGrid.innerHTML = '';
+        qData.options.forEach((opt, i) => {
+            const btn = document.createElement('div');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => {
+                if(i === qData.correct) {
+                    alert("回答正確！鑰匙出現了，請玩家 B 去拿！");
+                    quizSolved = true;
+                    document.getElementById('key').style.display = 'block';
+                } else {
+                    alert("答錯了，再試一次！");
+                }
+            };
+            optionsGrid.appendChild(btn);
+        });
+    }
+
+    // 監聽鍵盤控制玩家 B
+    window.addEventListener('keydown', (e) => {
+        const step = 20;
+        if (e.key === 'w') posB.y -= step;
+        if (e.key === 's') posB.y += step;
+        if (e.key === 'a') posB.x -= step;
+        if (e.key === 'd') posB.x += step;
+
+        const pB = document.getElementById('playerB');
+        pB.style.left = posB.x + 'px';
+        pB.style.top = posB.y + 'px';
+
+        checkCollision();
+    });
+
+    function checkCollision() {
+        // 檢查拿鑰匙
+        if (quizSolved && !hasKey) {
+            const key = document.getElementById('key');
+            if (Math.abs(posB.x - 400) < 40 && Math.abs(posB.y - 200) < 40) {
+                hasKey = true;
+                key.style.display = 'none';
+                alert("玩家 B 拿到了鑰匙！快去右下角的門！");
+            }
+        }
+
+        // 檢查開門
+        if (hasKey) {
+            if (posB.x > 720 && posB.y > 300) {
+                alert("過關！進入下一層！");
+                currentLevel++;
+                if (currentLevel < levels.length) {
+                    posB = { x: 100, y: 300 };
+                    const pB = document.getElementById('playerB');
+                    pB.style.left = posB.x + 'px';
+                    pB.style.top = posB.y + 'px';
+                    initLevel();
+                } else {
+                    alert("恭喜完成所有健康挑戰！");
+                    location.reload();
+                }
+            }
+        }
+    }
+
+    initLevel();
+</script>
+
+</body>
+</html>
